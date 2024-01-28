@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS Web App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <input type="text" id="searchInput" placeholder="Search location">
+    
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([37.7749, -122.4194], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        var pointsLayer = L.layerGroup().addTo(map);
+        var linesLayer = L.layerGroup().addTo(map);
+        var polygonsLayer = L.layerGroup().addTo(map);
+
+        function loadLayers() {
+            fetch('/get_layers') // Replace with your backend endpoint
+                .then(response => response.json())
+                .then(data => {
+                    addPoints(data.points);
+                    addLines(data.lines);
+                    addPolygons(data.polygons);
+                });
+        }
+
+        function addPoints(points) {
+            pointsLayer.clearLayers();
+            points.forEach(point => {
+                L.marker([point.lat, point.lon]).addTo(pointsLayer).bindPopup(point.name);
+            });
+        }
+
+        function addLines(lines) {
+            linesLayer.clearLayers();
+            lines.forEach(line => {
+                L.polyline(line).addTo(linesLayer);
+            });
+        }
+
+        function addPolygons(polygons) {
+            polygonsLayer.clearLayers();
+            polygons.forEach(polygon => {
+                L.polygon(polygon).addTo(polygonsLayer);
+            });
+        }
+
+        // Search functionality using Mapbox Geocoding API
+        document.getElementById('searchInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                var searchQuery = this.value;
+                fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${searchQuery}.json?access_token=YOUR_MAPBOX_ACCESS_TOKEN`)
+                    .then(response => response.json())
+                    .then(data => {
+                        var coordinates = data.features[0].center;
+                        map.setView([coordinates[1], coordinates[0]], 10);
+                    });
+            }
+        });
+
+        // Load layers on page load
+        loadLayers();
+    </script>
+</body>
+</html>
